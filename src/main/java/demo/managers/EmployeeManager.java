@@ -6,6 +6,7 @@ import demo.repositories.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Service
@@ -34,7 +35,8 @@ public class EmployeeManager {
                     return employeeRepository.save(foundEmployee);
                 })
                 .orElseGet(() -> {
-                    employee.setId(id);
+                    // employee.setId(id); This is a bug, it will not allow overriding of generated ID without a
+                    // customer sequence generator!
                     return employeeRepository.save(employee);
                 });
     }
