@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class Config {
 
-    @Bean("InitDB")
+    @Bean
     CommandLineRunner initDatabase(EmployeeRepository repository) {
         return args -> {
             log.info("Preloading " + repository.save(new Employee("Bilbo Baggins", "burglar")));

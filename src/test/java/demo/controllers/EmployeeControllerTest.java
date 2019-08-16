@@ -1,51 +1,32 @@
 package demo.controllers;
 
 
-import demo.Application;
-import demo.Config;
-import demo.controllers.advice.EmployeeControllerAdvice;
 import demo.models.Employee;
 import demo.repositories.EmployeeRepository;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static java.lang.String.format;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = Application.class)
-@ContextConfiguration(classes = Config.class)
-@DirtiesContext
+@SpringBootTest
+@AutoConfigureMockMvc
 public class EmployeeControllerTest {
 
     @Autowired
-    private EmployeeController employeeController;
+    private EmployeeRepository employeeRepository;
 
     @Autowired
-    private EmployeeControllerAdvice employeeControllerAdvice;
-
-    @Autowired
-    EmployeeRepository employeeRepository;
-
     private MockMvc mockMvc;
-
-    @Before
-    public void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(employeeController).setControllerAdvice(employeeControllerAdvice).build();
-    }
 
     @Test
     public void getAllEmployeesTest() throws Exception {
@@ -91,8 +72,7 @@ public class EmployeeControllerTest {
 
     @Test
     public void deleteEmployee() throws Exception {
-        // Manually create entry as bug in original code!
-        final Employee employee = new Employee("Bob", "Builder");
+        final var employee = new Employee("Bob", "Builder");
         employeeRepository.saveAndFlush(employee);
         this.mockMvc.perform(delete(format("/employees/%d", employee.getId())))
                 .andExpect(status().isOk());
