@@ -163,6 +163,7 @@ package demo.managers;
 import demo.models.Employee;
 import demo.repositories.EmployeeRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -175,6 +176,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EmployeeManagerTest {
 
     @Mock
@@ -197,6 +199,15 @@ class EmployeeManagerTest {
 
 You may notice running this test how much faster it is to load. That's because we are not setting
 up the Spring context for every test (class) run. The tests themselves take approximately the same
-time (which is what intelliJ reports on), but it is observable the speed difference between the two.
+time (according to what intelliJ reports on), but it is observable the speed difference between
+the two.
 
- 
+As an exercise for the reader, see if you can get complete coverage of this class! 
+
+_Hint: You may find this snippet handy..._
+
+```
+// This will always return whatever we try to save as the repository does
+when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+```
+
