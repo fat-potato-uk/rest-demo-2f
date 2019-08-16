@@ -3,13 +3,13 @@ package demo.controllers;
 
 import demo.models.Employee;
 import demo.repositories.EmployeeRepository;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static java.lang.String.format;
@@ -17,10 +17,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-public class EmployeeControllerTest {
+class EmployeeControllerTest {
 
     @Autowired
     private EmployeeRepository employeeRepository;
@@ -29,7 +29,7 @@ public class EmployeeControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    public void getAllEmployeesTest() throws Exception {
+    void getAllEmployeesTest() throws Exception {
         this.mockMvc.perform(get("/employees"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Bilbo Baggins"))
@@ -40,7 +40,7 @@ public class EmployeeControllerTest {
     }
 
     @Test
-    public void createNewEmployeeTest() throws Exception {
+    void createNewEmployeeTest() throws Exception {
         this.mockMvc.perform(post("/employees")
                 .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
                 .content("{\"name\":\"Harry Potter\",\"role\":\"Rubbish Wizard\"}"))
@@ -48,7 +48,7 @@ public class EmployeeControllerTest {
     }
 
     @Test
-    public void getOneEmployeeTest() throws Exception {
+    void getOneEmployeeTest() throws Exception {
         this.mockMvc.perform(get("/employees/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Bilbo Baggins"))
@@ -56,14 +56,14 @@ public class EmployeeControllerTest {
     }
 
     @Test
-    public void getOneEmployeeNotFoundTest() throws Exception {
+    void getOneEmployeeNotFoundTest() throws Exception {
         this.mockMvc.perform(get("/employees/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("No Employee found with ID: 99"));
     }
 
     @Test
-    public void replaceOrCreateEmployee() throws Exception {
+    void replaceOrCreateEmployee() throws Exception {
         this.mockMvc.perform(put("/employees/10")
                 .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
                 .content("{\"name\":\"Harry Potter\",\"role\":\"Rubbish Wizard\"}"))
@@ -71,7 +71,7 @@ public class EmployeeControllerTest {
     }
 
     @Test
-    public void deleteEmployee() throws Exception {
+    void deleteEmployee() throws Exception {
         final var employee = new Employee("Bob", "Builder");
         employeeRepository.saveAndFlush(employee);
         this.mockMvc.perform(delete(format("/employees/%d", employee.getId())))
