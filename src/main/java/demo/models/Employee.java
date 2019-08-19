@@ -10,7 +10,7 @@ import javax.persistence.Id;
 @Entity
 @NoArgsConstructor
 @RequiredArgsConstructor
-@EqualsAndHashCode(exclude = "id")
+@EqualsAndHashCode(exclude = {"id", "salary"})
 public class Employee {
     @Id
     @GeneratedValue
@@ -19,4 +19,5 @@ public class Employee {
     private String name;
     @NonNull
     private String role;
+    private Long salary;
 }

@@ -3,12 +3,15 @@ package demo.managers;
 import demo.models.Employee;
 import demo.models.exceptions.EmployeeNotFoundException;
 import demo.repositories.EmployeeRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Random;
 
 @Service
+@Slf4j
 public class EmployeeManager {
     @Autowired
     private EmployeeRepository employeeRepository;
@@ -18,6 +21,7 @@ public class EmployeeManager {
     }
 
     public Employee create(Employee employee) {
+        calculateSalary(employee);
         return employeeRepository.save(employee);
     }
 
@@ -30,12 +34,27 @@ public class EmployeeManager {
                 .map(foundEmployee -> {
                     foundEmployee.setName(employee.getName());
                     foundEmployee.setRole(employee.getRole());
+                    calculateSalary(employee);
                     return employeeRepository.save(foundEmployee);
                 })
-                .orElseGet(() -> employeeRepository.save(employee));
+                .orElseGet(() -> {
+                    calculateSalary(employee);
+                    return employeeRepository.save(employee);
+                });
     }
 
     public void removeEmployee(Long id) {
         employeeRepository.deleteById(id);
+    }
+
+    void calculateSalary(Employee employee) {
+        try {
+            // Do very expensive calculation
+            Thread.sleep(1000);
+            // Then just make up a number
+            employee.setSalary((new Random()).nextLong());
+        } catch (InterruptedException e) {
+            log.error(e.getMessage());
+        }
     }
 }

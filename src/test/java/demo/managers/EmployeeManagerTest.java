@@ -6,8 +6,7 @@ import demo.repositories.EmployeeRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -26,6 +25,10 @@ class EmployeeManagerTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Captor
+    private ArgumentCaptor<Employee> employeeCaptor;
+
+    @Spy
     @InjectMocks
     private EmployeeManager employeeManager;
 
@@ -45,8 +48,12 @@ class EmployeeManagerTest {
         // This will always return whatever we try to save as the repository does
         when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
+        // Skip the expensive call
+        doNothing().when(employeeManager).calculateSalary(employeeCaptor.capture());
+
         assertEquals(bob, employeeManager.create(bob));
         verify(employeeRepository, times(1)).save(eq(bob));
+        assertEquals(bob, employeeCaptor.getValue());
     }
 
     @Test
@@ -67,10 +74,14 @@ class EmployeeManagerTest {
         // This will always return whatever we try to save as the repository does
         when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
+        // Skip the expensive call
+        doNothing().when(employeeManager).calculateSalary(employeeCaptor.capture());
+
         when(employeeRepository.findById(eq(1L))).thenReturn(Optional.of(bob));
         assertEquals(sam, employeeManager.replaceOrCreateEmployee(1L, sam));
 
         verify(employeeRepository, times(1)).save(eq(sam));
+        assertEquals(sam, employeeCaptor.getValue());
     }
 
     @Test
@@ -78,11 +89,15 @@ class EmployeeManagerTest {
         // This will always return whatever we try to save as the repository does
         when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
+        // Skip the expensive call
+        doNothing().when(employeeManager).calculateSalary(employeeCaptor.capture());
+
         when(employeeRepository.findById(eq(1L))).thenReturn(Optional.empty());
         assertEquals(bob, employeeManager.replaceOrCreateEmployee(1L, bob));
 
         // The equality operator does not take into account Ids
         verify(employeeRepository, times(1)).save(eq(bob));
+        assertEquals(bob, employeeCaptor.getValue());
     }
 
     @Test
