@@ -1,111 +1,160 @@
-### Challenge 6
+### Challenge 7
 
-For this example we are going to be paying our employees!
+As the final polish to our application, we are going to add metrics. For this contrived example, we
+are going to add some metrics to the `EmployeeManager` to increment counts for each method called.
+
+Handily, Spring Boot has good support metrics. Via the `Actuator` module, it is trivial to add 
+metrics:
 
 ```
-void calculateSalary(Employee employee) {
-    try {
-        // Do very expensive calculation
-        Thread.sleep(1000);
-        // Then just make up a number
-        employee.setSalary((new Random()).nextLong());
-    } catch (InterruptedException e) {
-        log.error(e.getMessage());
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+
+Adding these to the `pom.xml` allows us to use the `MeterRegistry` bean as well as adding Prometheus
+support to the application (without directly coupling us to a metrics solution).
+
+Update the `EmployeeManager` so it now resembles this:
+
+```
+package demo.managers;
+
+import demo.models.Employee;
+import demo.models.exceptions.EmployeeNotFoundException;
+import demo.repositories.EmployeeRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Random;
+
+@Service
+@Slf4j
+public class EmployeeManager {
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
+
+    public List<Employee> getAll() {
+        meterRegistry.counter("employee_manager", "action", "get").increment();
+        return employeeRepository.findAll();
+    }
+
+    public Employee create(Employee employee) {
+        meterRegistry.counter("employee_manager", "action", "create").increment();
+        calculateSalary(employee);
+        return employeeRepository.save(employee);
+    }
+
+    public Employee getEmployee(Long id) throws EmployeeNotFoundException {
+        meterRegistry.counter("employee_manager", "action", "get").increment();
+        return employeeRepository.findById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
+    }
+
+    public Employee replaceOrCreateEmployee(Long id, Employee employee) {
+        meterRegistry.counter("employee_manager", "action", "create").increment();
+        return employeeRepository.findById(id)
+                .map(foundEmployee -> {
+                    foundEmployee.setName(employee.getName());
+                    foundEmployee.setRole(employee.getRole());
+                    calculateSalary(employee);
+                    return employeeRepository.save(foundEmployee);
+                })
+                .orElseGet(() -> {
+                    calculateSalary(employee);
+                    return employeeRepository.save(employee);
+                });
+    }
+
+    public void removeEmployee(Long id) {
+        meterRegistry.counter("employee_manager", "action", "remove").increment();
+        employeeRepository.deleteById(id);
+    }
+
+    void calculateSalary(Employee employee) {
+        try {
+            // Do very expensive calculation
+            Thread.sleep(1000);
+            // Then just make up a number
+            employee.setSalary((new Random()).nextLong());
+        } catch (InterruptedException e) {
+            log.error(e.getMessage());
+        }
     }
 }
 ```
 
-Like all good employers we take our time in offering the right compensation for our staff. For our 
-tests to continue working, we will need to exclude the salary from the comparison function generated
-by `Lombok`:
+It's worth noting that there is a lot of different approach you can take with creating metrics. This
+shows one approach whereby we rely on `MeterRegistry` behaviour not to recreate metrics with the
+same name and tags, but to increment previously created entries. We could have easily done something
+like this:
 
 ```
-@Data
-@Entity
-@NoArgsConstructor
-@RequiredArgsConstructor
-@EqualsAndHashCode(exclude = {"id", "salary"})
-public class Employee {
-    @Id
-    @GeneratedValue
-    private Long id;
-    @NonNull
-    private String name;
-    @NonNull
-    private String role;
-    private Long salary;
+private Counter removeCounter;
+
+public EmployeeManager(@Autowired MeterRegistry meterRegistry) {
+    removeCounter = meterRegistry.counter("employee_manager", "action", "remove");
+    ...
+}
+       
+...
+
+public void removeEmployee(Long id) {
+    removeCounter.increment();
+    employeeRepository.deleteById(id);
 }
 ```
 
-Update all the functions that `save` an `Employee` to the database so that we always set a salary.
+Which would achieve the same outcome. Much of how metrics are created depends on the manner to which
+they used, or more importantly, how they are to be tested (more on this to follow!).
 
-The problem now, as you may have noticed, is that this has had a rather negative effect on our tests:
-
-![Runtime](testTime.png?raw=true "Runtime")
-
-For the purposes of our contrived example, we don't really care about the salary calculation function
-given its basic nature. Both the functions are well tested external libraries and not within our remit
-to test, so lets skip that call!
-
-_Note: As you may have noticed, the function was declared as package private. This is a classic work 
-around to testing with private calls. It's not ideal, but you will see why its necessary shortly._
-
-As we are testing against a concrete object, we cannot simply "mock" the call in the same way, we can
-however "spy" on it:
+A final step is required before we can test our metrics, a configuration file is required:
 
 ```
-@Spy
-@InjectMocks
-private EmployeeManager employeeManager;
-```
-
-This allows us to mock out calls in the `EmployeeManager` now as if it were a mock. For example:
-
-```
-@Test
-void createTest() {
-    // This will always return whatever we try to save as the repository does
-    when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
-
-    // Skip the expensive call
-    doNothing().when(employeeManager).calculateSalary(any());
-    
-    assertEquals(bob, employeeManager.create(bob));
-    verify(employeeRepository, times(1)).save(eq(bob));
-}
-```
-
-Make the same changes to the other functions where required.
-
-Now our run times should be back to normal! Spies are very handy for getting good coverage in unit
-tests by exercising paths that may otherwise be complicated or involved to do. You can also wire
-them in via the `@SpyBean` annotation (akin to the `@MockBean`)
-
-We do have a slight issue though. Ideally, we would like to confirm the _right_ employees are 
-being passed into the call. We can do this through an argument captor:
+├── pom.xml
+├── rest-demo-2.iml
+├── src
+│   ├── main
+│   │   │ 
+│   │   └── resources
+│   │       └── application.yaml
 
 ```
-@Captor
-private ArgumentCaptor<Employee> employeeCaptor;
-```
-
-To use the captor, we can pass it into the `Spy` mocking call:
 
 ```
-@Test
-void createTest() {
-    // This will always return whatever we try to save as the repository does
-    when(employeeRepository.save(any())).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
-
-    // Skip the expensive call
-    doNothing().when(employeeManager).calculateSalary(employeeCaptor.capture());
-
-    assertEquals(bob, employeeManager.create(bob));
-    verify(employeeRepository, times(1)).save(eq(bob));
-    assertEquals(bob, employeeCaptor.getValue());
-}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
 ```
 
-Now we are avoiding the costly call but also checking our code behaves in the way we expect!
+The `application.yaml` configures `Actuator` so the appropriate endpoints are opened up.
 
-Update the other tests accordingly.
+If you run the application (`spring-boot:run`) and navigate to http://localhost:8080/actuator/prometheus
+you can see all of the metrics our application is providing.
+
+If you run one of the `curl` commands from before, you can check that the metrics are incremented
+accordingly:
+
+```
+employee_manager_total{action="get",} 4.0
+```
+
+You may also note that none of the other metrics are available. That's because we have created them
+in a dynamic manner. Until we hit those endpoints we will not create the corresponding counters.
+
+As an exercise, look to correct this behaviour and test the counter in the unit tests.
+
+_Note: Avoid using "real" `MeterRegistry` implementation wherever possible. This can lead to
+scenarios where you need to run `@DirtiesContext` in order to reset counters which is very costly!_
