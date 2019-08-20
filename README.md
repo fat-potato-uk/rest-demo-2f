@@ -6,7 +6,7 @@ are going to add some metrics to the `EmployeeManager` to increment counts for e
 Handily, Spring Boot has good support metrics. Via the `Actuator` module, it is trivial to add 
 metrics:
 
-```
+```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-actuator</artifactId>
@@ -22,7 +22,7 @@ support to the application (without directly coupling us to a metrics solution).
 
 Update the `EmployeeManager` so it now resembles this:
 
-```
+```java
 package demo.managers;
 
 import demo.models.Employee;
@@ -99,7 +99,7 @@ shows one approach whereby we rely on `MeterRegistry` behaviour not to recreate 
 same name and tags, but to increment previously created entries. We could have easily done something
 like this:
 
-```
+```java
 private Counter removeCounter;
 
 public EmployeeManager(@Autowired MeterRegistry meterRegistry) {
@@ -131,7 +131,7 @@ A final step is required before we can test our metrics, a configuration file is
 
 ```
 
-```
+```yaml
 management:
   endpoints:
     web:
