@@ -158,3 +158,59 @@ As an exercise, look to correct this behaviour and test the counter in the unit 
 
 _Note: Avoid using "real" `MeterRegistry` implementation wherever possible. This can lead to
 scenarios where you need to run `@DirtiesContext` in order to reset counters which is very costly!_
+
+##### Hints
+
+* As suggesterd, creating the metrics on construction of a bean helps avoid the
+ "Dynamic metric" effect:
+ 
+ ```java
+...
+    private final Counter createCounter;
+    private final Counter getCounter;
+    private final Counter removeCounter;
+
+    public EmployeeManager(@Autowired MeterRegistry meterRegistry) {
+        createCounter = meterRegistry.counter("employee_manager", "action", "create");
+        getCounter    = meterRegistry.counter("employee_manager", "action", "get");
+        removeCounter = meterRegistry.counter("employee_manager", "action", "remove");
+    }
+...
+```
+* Each method only increments a single mock. This can make testing easier as we can re-use
+the same mock `Counter` each time.
+
+* `JUnit 5` provides a few ways to setup and clear down tests. These can be used in setup
+of the mocks required:
+
+```java
+...
+    @Mock
+    private EmployeeRepository employeeRepository;
+
+    @Captor
+    private ArgumentCaptor<Employee> employeeCaptor;
+
+    private EmployeeManager employeeManager;
+
+    private Counter mockCounter;
+
+    @BeforeEach // This happens before each test and after field initialisation
+    void beforeEach() {
+        setField(employeeManager, "employeeRepository", employeeRepository);
+        reset(mockCounter);
+    }
+
+    @BeforeAll // This happens before Mockito initialises all the fields
+    void beforeAll() {
+        mockCounter = mock(Counter.class);
+        var meterRegistry = mock(MeterRegistry.class);
+
+        // We can reuse the same mock in our use case
+        when(meterRegistry.counter(anyString(), ArgumentMatchers.<String>any())).thenReturn(mockCounter);
+
+        employeeManager = spy(new EmployeeManager(meterRegistry));
+    }
+...  
+```
+
