@@ -50,7 +50,7 @@ public class EmployeeManager {
                 .map(foundEmployee -> {
                     foundEmployee.setName(employee.getName());
                     foundEmployee.setRole(employee.getRole());
-                    calculateSalary(employee);
+                    calculateSalary(foundEmployee);
                     return employeeRepository.save(foundEmployee);
                 })
                 .orElseGet(() -> {
