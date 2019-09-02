@@ -163,7 +163,7 @@ scenarios where you need to run `@DirtiesContext` in order to reset counters whi
 
 If the struggle is too much :) 
 
-* As suggesterd, creating the metrics on construction of a bean helps avoid the
+* As suggested, creating the metrics on construction of a bean helps avoid the
  "dynamic metric" effect:
  
  ```java
