@@ -10,10 +10,12 @@ metrics:
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-actuator</artifactId>
+    <version>${spring.boot.version}</version>
 </dependency>
 <dependency>
     <groupId>io.micrometer</groupId>
     <artifactId>micrometer-registry-prometheus</artifactId>
+    <version>1.3.5</version>
 </dependency>
 ```
 
